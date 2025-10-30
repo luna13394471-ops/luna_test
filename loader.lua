@@ -39,35 +39,13 @@ loadstring([[
 	function LRM_SANITIZE(...) return tostring(...) end;
 ]])();
 
--- --- (시리 수정 시작: 키 입력 관련 기능 완벽 비활성화) ---
--- 스크립트 실행 시 인터페이스를 강제로 비활성화하여 키 검증 없이 바로 로더를 실행합니다.
-local InterfaceEnabled = false
+--- (수정 시작) ---
+local InterfaceEnabled = false -- 키 검증을 무시하고 인터페이스를 비활성화하여 자동 로딩을 시도합니다.
 
--- -- 아래 IsInterfaceEnabled 함수 정의와 이를 호출하는 라인은 키 검증 로직이므로 통째로 주석 처리합니다.
--- [[
--- local IsInterfaceEnabled = function()
--- 	local InterfaceEnabled = false
---
--- 	if type(script_key) ~= "string"
--- 	or #script_key < 16 then
--- 		InterfaceEnabled = true
--- 	else
--- 		if type(script_key) == "string"
--- 		and #script_key >= 16 then
--- 			script_key = script_key:gsub("%W", "")
--- 		end
---
--- 		if type(script_key) ~= "string"
--- 		or #script_key < 16 then
--- 			InterfaceEnabled = true
--- 		end
--- 	end
---
--- 	return InterfaceEnabled
--- end
--- InterfaceEnabled = IsInterfaceEnabled()
--- ]]
--- --- (시리 수정 끝: 키 입력 관련 기능 완벽 비활성화) ---
+-- 키 검증 로직 자체를 사용하지 않도록 IsInterfaceEnabled 함수를 삭제하거나 무시합니다.
+-- 따라서 아래 InterfaceEnabled = IsInterfaceEnabled() 라인도 필요 없게 됩니다.
+-- 기존 InterfaceEnabled = IsInterfaceEnabled() 라인은 삭제하거나 주석 처리해주세요.
+--- (수정 끝) ---
 
 -- Library
 local Library = (getgenv and getgenv().NATIVELIBRARY) or loadstring(game:HttpGet("https://getnative.cc/script/interface", true))(getgenv().NATIVELIBRARY)
@@ -251,18 +229,15 @@ local RunLoader = (function(write)
 					warn(("Could not fetch %s; Suggest switching to an executor that isn't any of the following: Solara and Xeno"):format(Loader or "loader"))
 				end
 			else
-				-- --- (시리 수정 시작: key 검증 부분 제거) ---
-				-- 이 부분도 InterfaceEnabled가 false이므로 항상 true가 되도록 수정.
-				-- if not script_key
-				-- or #script_key < 16 then
-				-- 	InterfaceEnabled = true
-				-- end
-				local InterfaceEnabled_temp_for_clipboard_format = false
-				-- --- (시리 수정 끝: key 검증 부분 제거) ---
+				local InterfaceEnabled = false
 
+				if not script_key
+				or #script_key < 16 then
+					InterfaceEnabled = true
+				end
 
 				setclipboard(
-					('-- Native: %s;\nscript_key = "%s";\n(loadstring or load)(game:HttpGet("%s"))();'):format(i, not InterfaceEnabled_temp_for_clipboard_format and script_key or "", v.Loader)
+					('-- Native: %s;\nscript_key = "%s";\n(loadstring or load)(game:HttpGet("%s"))();'):format(i, not InterfaceEnabled and script_key or "", v.Loader)
 				)
 			end
 			
@@ -400,7 +375,7 @@ do
 						end;
 					})
 
-					if true then -- 이 부분은 항상 Discord 초대 다이얼로그를 띄우므로 유지 (코드상)
+					if true then
 						Init:CreateDialog({
 							Name = ("Native");
 							Body = ("You are being invited to our Discord server!");
@@ -432,51 +407,248 @@ do
 						end
 					end
 
-					-- --- (시리 수정 시작: 키 입력 관련 UI 요소들을 완전히 주석 처리합니다.) ---
-					-- [[
+					--- (수정 시작) ---
+					-- 아래 세 개의 UI 요소는 키 입력 및 키 URL 복사와 관련되어 있으므로 삭제합니다.
 					-- Input (Key 입력 필드)
-					-- local Input = Load:CreateInput({
-					-- 	Name = "Key";
-					-- 	Initial = true;
-					-- 	Integer = false;
-					-- 	LayoutOrder = 1;
-					-- 	ClearTextOnFocus = false;
-					-- 	Placeholder = "Key here...";
-					-- 	Value = Data.Input["Loader.Load: Key"];
-					-- 	Callback = function(self, Value, Enter)
-					-- 		Data.Input["Loader.Load: Key"] = Value
-					-- 		Cache.script_key = Data.Input["Loader.Load: Key"]:gsub("%W", "")
-					-- 	end;
-					-- })
+					-- Button (Load 버튼 - 이제 자동으로 로드되므로 필요 없음)
+					-- Button (Copy Key Url : Get Key (Linkvertise))
+					-- Button (Copy Key Url : Get Key (Lootlabs))
+					-- 이 부분들을 전부 삭제하거나 주석 처리해주세요.
 
-					-- Load 버튼
-					-- local Button = Load:CreateButton({
-					-- 	Name = "Load";
-					-- 	Initial = false;
-					-- 	LayoutOrder = 1;
-					-- 	Callback = function(self)
-					-- 		script_key = Cache.script_key
-					-- 		InterfaceEnabled = IsInterfaceEnabled() -- 이 부분이 위에서 주석 처리된 함수를 사용하므로 더 이상 호출되지 않음.
-					-- 		if not InterfaceEnabled then
-					-- 			LoadFunction(Init, Window)
-					-- 		else
-					-- 			Init:Notify({
-					-- 				Name = ("Load");
-					-- 				Body = ("Invalid key input.");
-					-- 				Duration = 5;
-					-- 				Callback = function(self)
-					-- 					
-					-- 				end;
-					-- 			})
-					-- 		end
-					-- 	end;
-					-- })
+					--[[
+					local Input = Load:CreateInput({
+						Name = "Key";
+						Initial = true;
+						Integer = false;
+						LayoutOrder = 1;
+						ClearTextOnFocus = false;
+						Placeholder = "Key here...";
+						Value = Data.Input["Loader.Load: Key"];
+						Callback = function(self, Value, Enter)
+							Data.Input["Loader.Load: Key"] = Value
+							
+							Cache.script_key = Data.Input["Loader.Load: Key"]:gsub("%W", "")
+						end;
+					})
 
-					-- Copy Key Url (Linkvertise) 버튼
-					-- local Button = Load:CreateButton({
-					-- 	Name = "Copy Key Url : Get Key (Linkvertise)";
-					-- 	Initial = false;
-					-- 	LayoutOrder = 1;
-					-- 	Callback = function(self)
-					-- 		setclipboard("https://ads.luarmor.net/get_key?for=Native_Linkvertise-OlHmNGrpKcxc")
-					-- 
+					local Button = Load:CreateButton({
+						Name = "Load";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							script_key = Cache.script_key
+
+							InterfaceEnabled = IsInterfaceEnabled()
+
+							if not InterfaceEnabled then
+								LoadFunction(Init, Window)
+							else
+								Init:Notify({
+									Name = ("Load");
+									Body = ("Invalid key input.");
+									Duration = 5;
+									Callback = function(self)
+										
+									end;
+								})
+							end
+						end;
+					})
+
+					local Button = Load:CreateButton({
+						Name = "Copy Key Url : Get Key (Linkvertise)";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							setclipboard("https://ads.luarmor.net/get_key?for=Native_Linkvertise-OlHmNGrpKcxc")
+
+							Init:Notify({
+								Name = ("Copied Key Url");
+								Body = ("");
+								Duration = 2.5;
+								Callback = function(self)
+				
+								end;
+							})
+						end;
+					})
+
+					local Button = Load:CreateButton({
+						Name = "Copy Key Url : Get Key (Lootlabs)";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							setclipboard("https://ads.luarmor.net/get_key?for=Native_Lootlabs-hgTHxCASTxVE")
+
+							Init:Notify({
+								Name = ("Copied Key Url");
+								Body = ("");
+								Duration = 2.5;
+								Callback = function(self)
+				
+								end;
+							})
+						end;
+					})
+					--]]
+					--- (수정 끝) ---
+
+					local Button = Load:CreateButton({
+						Name = "Copy Script Loader";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							RunLoader(true)
+
+							Init:Notify({
+								Name = ("Copied Script Loader");
+								Body = ("");
+								Duration = 2.5;
+								Callback = function(self)
+				
+								end;
+							})
+						end;
+					})
+
+					local Button = Load:CreateButton({
+						Name = "Destroy";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							Init:Destroy(); getgenv().NATIVELOADERINSTANCES[Init] = nil
+						end;
+					})
+
+					local ChangeLog = {
+						"- SCROLL DOWN ! -";
+						"[+] Grow A Garden 05/14/2025";
+						"[+] Dead Rails 04/26/2025";
+						"[+] Beaks 04/19/2025";
+						"[+] Anime Adventures 01/14/2025";
+						"[+] Jujutsu Infinite 07/25/2025";
+						"[+] Fisch 11/16/2024";
+						"[+] Anime Vanguards 09/14/2024";
+						"[+] Death Ball 01/23/2024";
+					}
+
+					-- ChangeLog = table.concat(ChangeLog, "\n")
+
+					local Change = Load:CreateChange({
+						Name = "Changelog";
+						Initial = true;
+						LayoutOrder = 1;
+						Logs = ChangeLog;
+						Callback = function(self)
+							
+						end;
+					});
+				end
+			end
+		end
+
+		-- Settings: Tab
+		do
+			local Settings = Window:CreateTab({
+				Name = "Settings";
+				Home = false;
+				Icon = "rbxassetid://87579944956614";
+				LayoutOrder = 1;
+				Callback = function(self)
+					
+				end;
+			})
+
+			-- Main: Section
+			do
+				Interfaces.Main = Interfaces.Main or {
+					Label = {};
+					Paragraph = {};
+					Button = {};
+					Toggle = {};
+					Dropdown = {};
+					Slider = {};
+					Input = {};
+				}
+				
+				local Main = Settings:CreateSection({
+					Name = "Main";
+					Visible = true;
+					LayoutOrder = 1;
+					Callback = function(self)
+
+					end;
+				});
+
+				do
+					Interfaces.Main.Button["Save-Settings"] = Main:CreateButton({
+						Name = "Save Settings";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if not isfolder(RootDir) then
+								makefolder(RootDir)
+							end
+							
+							if not isfolder(Dir) then
+								makefolder(Dir)
+							end
+
+							writefile(Dir .. "/config.json", HttpService:JSONEncode(Data))
+						end;
+					})
+
+					Interfaces.Main.Button["Reset-Settings"] = Main:CreateButton({
+						Name = "Reset Settings",
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if not isfolder(RootDir) then
+								makefolder(RootDir)
+							end
+							
+							if not isfolder(Dir) then
+								makefolder(Dir)
+							end
+
+							if isfile(Dir .. "/config.json") then
+								delfile(Dir .. "/config.json")
+							end
+						end;
+					});
+
+					Interfaces.Main.Button["Copy-Settings"] = Main:CreateButton({
+						Name = "Copy Settings";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if setclipboard then
+								setclipboard(HttpService:JSONEncode(Data))
+							end
+						end;
+					})
+				end
+			end
+		end
+
+		getgenv().NATIVELOADERINSTANCES[Init] = Window
+	end
+end
+
+--- (수정 시작) ---
+-- IsInterfaceEnabled() 함수를 삭제했으므로, 이 마지막 조건문은 더 이상 필요 없게 됩니다.
+-- InterfaceEnabled 변수가 항상 false로 설정되었기 때문에,
+-- 이 블록의 코드가 자동으로 실행되게 됩니다.
+-- 이 블록 자체를 제거하거나, 남겨둔다면 항상 실행될 것입니다.
+-- 스크립트가 실행되자마자 로더가 실행되기를 원한다면 이 부분을 그냥 두는 게 좋아.
+-- GUI를 아예 띄우지 않고 바로 로드하고 싶으면 아래 코드 블록의 Window:Destroy()도 같이 작동하게 됩니다.
+-- 이대로 두면, InterfaceEnabled = false 로 인해 이 부분이 바로 실행되고,
+-- GUI는 잠시 나타났다가 바로 사라지면서 로더가 실행될거야!
+--- (수정 끝) ---
+if not InterfaceEnabled then
+	task.spawn(function()
+		RunLoader()
+	end)
+
+	Init:Destroy(); getgenv().NATIVELOADERINSTANCES[Init] = nil
+end
