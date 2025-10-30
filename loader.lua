@@ -22,9 +22,8 @@ elseif getgenv().NATIVELOADERINSTANCES and getmetatable(getgenv().NATIVELOADERIN
 	end
 end
 
--- 🔥 1. 키 우회 설정: 외부 로더가 확인할 수 있도록 전역 및 로컬 변수에 임의의 키 설정
-script_key = "NATIVE_KEY_BYPASS_ATTEMPT_20251030" -- 임의의 유효성 통과를 기대하는 문자열
-getgenv().script_key = script_key 
+-- 키 변수는 유지하되, 값이 없어도 상관없도록 처리
+script_key=script_key or "";
 
 getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {
 	OverwriteConfiguration = false;
@@ -33,14 +32,22 @@ getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {
 
 loadstring([[
 	function LPH_NO_VIRTUALIZE(f) return f end;
+
 	function LPH_JIT(f) return f end;
+
 	function LPH_JIT_MAX(f) return f end;
+
 	function LRM_SANITIZE(...) return tostring(...) end;
 ]])();
 
--- --- (시리 수정 시작: 키 입력 관련 기능 및 UI 초기 자동 파괴 비활성화) ---
-local InterfaceEnabled = false -- UI 유지를 위해 변경했으나, 최종적으로는 UI를 파괴하지 않고 로딩합니다.
--- --- (시리 수정 끝) ---
+local InterfaceEnabled = false
+
+local IsInterfaceEnabled = function()
+    -- **[수정됨]: 항상 false를 반환하여 키 유효성 검사를 무시하고 로더를 실행합니다.**
+	return false 
+end
+
+InterfaceEnabled = IsInterfaceEnabled() -- 이제 InterfaceEnabled는 항상 false입니다.
 
 -- Library
 local Library = (getgenv and getgenv().NATIVELIBRARY) or loadstring(game:HttpGet("https://getnative.cc/script/interface", true))(getgenv().NATIVELIBRARY)
@@ -56,8 +63,7 @@ local service = setmetatable({}, {
 -- Variables
 local ServiceIdentifier = "native" or "(__YourServiceIdentifier__)"
 local ServiceName = "Native" or "(__YourServiceName__)"
--- 🔥 2. API 토큰 제거 시도: 서버 통신을 방해하여 클라이언트 측 검증을 건너뛰게 유도
-local APIToken = "" or "(__YourAPIToken__)" 
+local APIToken = "Submarine" or "(__YourAPIToken__)"
 local KeyPrefix = "Native_" or "(__YourKeyPrefix__)"
 local KeyDirectory = "Nativity" or "(__YourKeyDirectory__)"
 
@@ -84,6 +90,7 @@ if not (isfile(Dir) or isfolder(Dir)) then
 	makefolder(Dir)
 end
 
+-- UI 제거로 인해 데이터 저장이 불필요하지만, 로직 유지를 위해 남겨둠
 local Data = {
 	Toggle = {
 		["General"] = true;
@@ -94,7 +101,7 @@ local Data = {
 	Slider = {
 	};
 	Input = {
-		["Loader.Load: Key"] = script_key; -- 🔥 3. 저장된 키에도 우회 키 값 저장
+		["Loader.Load: Key"] = "";
 	};
 	Keybind = {
 	};
@@ -128,13 +135,12 @@ if isfile(Dir .. "/config.json") then
 	end
 end
 
-local Interfaces = {}
+-- local Interfaces = {} -- UI 제거로 인해 불필요
 
 local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 
 local RunLoader = (function(write)
 	local Projects = {
-		-- 게임 ID 목록은 그대로 유지
 		["Death Ball"] = {
 			GameId = 5166944221;
 			PlaceIds = {};
@@ -205,27 +211,19 @@ local RunLoader = (function(write)
 				if GETResponse then
 					getgenv().NATIVELOADED = true
 
-					-- 🔥 4. pcall로 로더 실행을 감싸서 오류 발생 시 종료 방지
-					local success, err = pcall(function()
-						(
-							loadstring or load
-						)(
-							GETResponse
-						)()
-					end)
+					(
+						loadstring or load
+					)(
+						GETResponse
+					)()
 
-					if not success then
-						warn(("Failed to execute the external loader for %s: %s"):format(i, tostring(err)))
-					end
-					
 					if Data.Toggle["Loader.Load: Queue On Teleport"] then
 						if not getgenv().NATIVEQUEUEONTELEPORT then
 							local queueteleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
 
 							if queueteleport then
 								getgenv().NATIVEQUEUEONTELEPORT = GETResponse
-								
-								-- 🔥 5. Queue On Teleport 시에도 우회 키 사용
+
 								queueteleport(('script_key = "%s";\n%s'):format(script_key, getgenv().NATIVEQUEUEONTELEPORT))
 							end
 						end
@@ -234,9 +232,15 @@ local RunLoader = (function(write)
 					warn(("Could not fetch %s; Suggest switching to an executor that isn't any of the following: Solara and Xeno"):format(Loader or "loader"))
 				end
 			else
-				-- Copy Script Loader
+				local InterfaceEnabled = false
+
+				if not script_key
+				or #script_key < 16 then
+					InterfaceEnabled = true
+				end
+
 				setclipboard(
-					('-- Native: %s;\nscript_key = "%s";\n(loadstring or load)(game:HttpGet("%s"))();'):format(i, script_key, v.Loader)
+					('-- Native: %s;\nscript_key = "%s";\n(loadstring or load)(game:HttpGet("%s"))();'):format(i, not InterfaceEnabled and script_key or "", v.Loader)
 				)
 			end
 			
@@ -253,27 +257,9 @@ local RunLoader = (function(write)
 	end
 end)
 
-local LoadFunction = function(Init, Window)
-	Window:Destroy() -- UI 창 닫기
-	RunLoader()      -- 로더 실행
+-- **[삭제됨]: 키 입력 GUI를 로드 후 파괴하는 LoadFunction 함수 제거**
 
-	Init:Notify({
-		Name = ("Loaded");
-		Body = ("");
-		Duration = 5;
-		Callback = function(self)
-
-		end;
-	})
-
-	task.spawn(function()
-		task.wait(2.5)
-
-		Init:Destroy(); getgenv().NATIVELOADERINSTANCES[Init] = nil
-	end)
-}
-
--- UI 생성 부분은 그대로 유지 (로드 후 파괴되도록 LoadFunction을 호출)
+-- **[남아있음]: UI를 생성하는 Init 호출(라이브러리를 초기화만 하고 UI는 만들지 않습니다)**
 local Init = Library:Init({
 	Name = "Native";
 	Parent = service.CoreGui;
@@ -282,206 +268,19 @@ local Init = Library:Init({
 	end;
 })
 
-local Window = nil -- UI 객체를 저장할 변수
+-- **[삭제됨]: 전체 UI 생성 및 처리 로직 제거 (Init:CreateWindow 부터 끝까지)**
+-- do
+-- 	local Window = Init:CreateWindow({
+-- 		... (전체 UI 관련 코드) ...
+-- 	end
+-- end
 
-do
-	Window = Init:CreateWindow({
-		Name = "Loader";
-		Visible = true;
-		Silent = false;
-		Asset = false;
-		Keybind = Enum.KeyCode.RightShift;
-		Callback = function(self)
 
-		end;
-	}); do
-		-- Loader: Tab
-		do
-			local Loader = Window:CreateTab({
-				Name = "Loader";
-				Home = true;
-				Icon = nil;
-				LayoutOrder = 1;
-				Callback = function(self)
+-- **[수정됨]: InterfaceEnabled가 항상 false이므로, 로더가 즉시 실행됩니다.**
+if not InterfaceEnabled then
+	task.spawn(function()
+		RunLoader()
+	end)
 
-				end;
-			})
-			
-			-- Load: Section
-			do
-				local Load = Loader:CreateSection({
-					Name = "Load";
-					Visible = true;
-					LayoutOrder = 1;
-					Callback = function(self)
-
-					end;
-				}); do
-					local Toggle = Load:CreateToggle({
-						Name = "Queue On Teleport (Execute Native On Teleport AKA Auto-Execute On Teleport)";
-						Initial = true;
-						LayoutOrder = 1;
-						Value = Data.Toggle["Loader.Load: Queue On Teleport"];
-						Callback = function(self, Value)
-							Data.Toggle["Loader.Load: Queue On Teleport"] = Value
-							
-							if Data.Toggle["Loader.Load: Queue On Teleport"] then
-								Init:Notify({
-									Name = ("Queuing On Teleport");
-									Body = ("");
-									Duration = 5;
-									Callback = function(self)
-										
-									end;
-								})
-							end
-						end;
-					})
-
-					local Button = Load:CreateButton({
-						Name = "Join Our Discord Server";
-						Initial = false;
-						LayoutOrder = 1;
-						Callback = function(self)
-							setclipboard("https://discord.gg/natives")
-
-							Init:Notify({
-								Name = ("Copied Discord Url");
-								Body = ("");
-								Duration = 2.5;
-								Callback = function(self)
-				
-								end;
-							})
-							-- Discord RPC 호출 로직은 그대로 유지
-							if httprequest then
-								task.spawn(function()
-									pcall(function()
-										httprequest({
-											Url = 'http://127.0.0.1:6463/rpc?v=1',
-											Method = 'POST',
-											Headers = {
-												['Content-Type'] = 'application/json',
-												Origin = 'https://discord.com/'
-											},
-											Body = HttpService:JSONEncode({
-												cmd = 'INVITE_BROWSER',
-												nonce = HttpService:GenerateGUID(false),
-												args = {code = 'natives'}
-											})
-										})
-									end)
-								end)
-							end
-						end;
-					})
-
-					-- Discord Dialog 로직은 그대로 유지
-					if true then 
-						Init:CreateDialog({
-							Name = ("Native");
-							Body = ("You are being invited to our Discord server!");
-							Duration = 15;
-							Buttons = {};
-							Callback = function(self)
-								
-							end;
-						})
-
-						if httprequest then
-							task.spawn(function()
-								pcall(function()
-									httprequest({
-										Url = 'http://127.0.0.1:6463/rpc?v=1',
-										Method = 'POST',
-										Headers = {
-											['Content-Type'] = 'application/json',
-											Origin = 'https://discord.com/'
-										},
-										Body = HttpService:JSONEncode({
-											cmd = 'INVITE_BROWSER',
-											nonce = HttpService:GenerateGUID(false),
-											args = {code = 'natives'}
-										})
-									})
-								end)
-							end)
-						end
-					end
-
-					-- 키 입력 필드 및 관련 버튼 제거
-
-					local Button = Load:CreateButton({ 
-						Name = "Load (Bypass Key)";
-						Initial = false;
-						LayoutOrder = 1;
-						Callback = function(self)
-							-- LoadFunction을 호출하여 키 없이 로드 시도
-							LoadFunction(Init, Window) 
-						end;
-					})
-
-					local Button = Load:CreateButton({
-						Name = "Copy Script Loader (Bypass Key)";
-						Initial = false;
-						LayoutOrder = 1;
-						Callback = function(self)
-							RunLoader(true)
-
-							Init:Notify({
-								Name = ("Copied Script Loader");
-								Body = ("");
-								Duration = 2.5;
-								Callback = function(self)
-				
-								end;
-							})
-						end;
-					})
-
-					local Button = Load:CreateButton({
-						Name = "Destroy";
-						Initial = false;
-						LayoutOrder = 1;
-						Callback = function(self)
-							Init:Destroy(); getgenv().NATIVELOADERINSTANCES[Init] = nil
-						end;
-					})
-
-					local ChangeLog = {
-						"- SCROLL DOWN ! -";
-						"[+] Grow A Garden 05/14/2025";
-						"[+] Dead Rails 04/26/2025";
-						"[+] Beaks 04/19/2025";
-						"[+] Anime Adventures 01/14/2025";
-						"[+] Jujutsu Infinite 07/25/2025";
-						"[+] Fisch 11/16/2024";
-						"[+] Anime Vanguards 09/14/2024";
-						"[+] Death Ball 01/23/2024";
-					}
-
-					local Change = Load:CreateChange({
-						Name = "Changelog";
-						Initial = true;
-						LayoutOrder = 1;
-						Logs = ChangeLog;
-						Callback = function(self)
-							
-						end;
-					});
-				end
-			end
-		end
-
-		-- Settings: Tab은 그대로 유지
-
-		getgenv().NATIVELOADERINSTANCES[Init] = Window
-	end
+	Init:Destroy(); getgenv().NATIVELOADERINSTANCES[Init] = nil
 end
-
--- 🔥 6. 스크립트 실행 즉시 LoadFunction 호출
--- UI가 완전히 로드된 후, 자동으로 LoadFunction을 호출하여 즉시 로딩을 시도합니다.
-task.spawn(function()
-    task.wait(1) -- UI 로딩을 위해 잠시 대기
-    LoadFunction(Init, Window)
-end)
