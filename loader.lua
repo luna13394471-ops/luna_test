@@ -606,9 +606,3 @@ do
 		getgenv().NATIVELOADERINSTANCES[Init] = Window
 	end
 end
-
----[[
--- UI가 사라지지 않고 유지되도록 변경
--- 초기에는 UI만 뜨고, 사용자가 Load 버튼을 눌러야 로더가 실행되게 함
--- 그래서 스크립트 실행 시 바로 Init:Destroy() 하지 않고, 이 마지막 블록을 완전히 주석 처리하여 초기 자동 로드 및 UI 파괴를 막습니다.
---]]
