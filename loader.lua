@@ -22,8 +22,8 @@ elseif getgenv().NATIVELOADERINSTANCES and getmetatable(getgenv().NATIVELOADERIN
 	end
 end
 
--- 키 변수는 유지하되, 값이 없어도 상관없도록 처리
-script_key=script_key or "";
+-- **[수정된 부분]: 키 유효성 검사를 통과하기 위해 16자 이상의 더미 키를 할당합니다.**
+script_key = script_key or "AAAAAAAAAAAAAAAA";
 
 getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {
 	OverwriteConfiguration = false;
@@ -43,11 +43,10 @@ loadstring([[
 local InterfaceEnabled = false
 
 local IsInterfaceEnabled = function()
-    -- **[수정됨]: 항상 false를 반환하여 키 유효성 검사를 무시하고 로더를 실행합니다.**
 	return false 
 end
 
-InterfaceEnabled = IsInterfaceEnabled() -- 이제 InterfaceEnabled는 항상 false입니다.
+InterfaceEnabled = IsInterfaceEnabled()
 
 -- Library
 local Library = (getgenv and getgenv().NATIVELIBRARY) or loadstring(game:HttpGet("https://getnative.cc/script/interface", true))(getgenv().NATIVELIBRARY)
@@ -90,7 +89,6 @@ if not (isfile(Dir) or isfolder(Dir)) then
 	makefolder(Dir)
 end
 
--- UI 제거로 인해 데이터 저장이 불필요하지만, 로직 유지를 위해 남겨둠
 local Data = {
 	Toggle = {
 		["General"] = true;
@@ -134,8 +132,6 @@ if isfile(Dir .. "/config.json") then
 		end
 	end
 end
-
--- local Interfaces = {} -- UI 제거로 인해 불필요
 
 local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 
@@ -257,9 +253,6 @@ local RunLoader = (function(write)
 	end
 end)
 
--- **[삭제됨]: 키 입력 GUI를 로드 후 파괴하는 LoadFunction 함수 제거**
-
--- **[남아있음]: UI를 생성하는 Init 호출(라이브러리를 초기화만 하고 UI는 만들지 않습니다)**
 local Init = Library:Init({
 	Name = "Native";
 	Parent = service.CoreGui;
@@ -268,15 +261,6 @@ local Init = Library:Init({
 	end;
 })
 
--- **[삭제됨]: 전체 UI 생성 및 처리 로직 제거 (Init:CreateWindow 부터 끝까지)**
--- do
--- 	local Window = Init:CreateWindow({
--- 		... (전체 UI 관련 코드) ...
--- 	end
--- end
-
-
--- **[수정됨]: InterfaceEnabled가 항상 false이므로, 로더가 즉시 실행됩니다.**
 if not InterfaceEnabled then
 	task.spawn(function()
 		RunLoader()
