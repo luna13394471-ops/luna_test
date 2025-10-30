@@ -533,4 +533,82 @@ do
 
 			-- Main: Section
 			do
-				Interfaces.Main = Interfaces
+				Interfaces.Main = Interfaces.Main or {
+					Label = {};
+					Paragraph = {};
+					Button = {};
+					Toggle = {};
+					Dropdown = {};
+					Slider = {};
+					Input = {};
+				}
+				
+				local Main = Settings:CreateSection({
+					Name = "Main";
+					Visible = true;
+					LayoutOrder = 1;
+					Callback = function(self)
+
+					end;
+				});
+
+				do
+					Interfaces.Main.Button["Save-Settings"] = Main:CreateButton({
+						Name = "Save Settings";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if not isfolder(RootDir) then
+								makefolder(RootDir)
+							end
+							
+							if not isfolder(Dir) then
+								makefolder(Dir)
+							end
+
+							writefile(Dir .. "/config.json", HttpService:JSONEncode(Data))
+						end;
+					})
+
+					Interfaces.Main.Button["Reset-Settings"] = Main:CreateButton({
+						Name = "Reset Settings",
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if not isfolder(RootDir) then
+								makefolder(RootDir)
+							end
+							
+							if not isfolder(Dir) then
+								makefolder(Dir)
+							end
+
+							if isfile(Dir .. "/config.json") then
+								delfile(Dir .. "/config.json")
+							end
+						end;
+					});
+
+					Interfaces.Main.Button["Copy-Settings"] = Main:CreateButton({
+						Name = "Copy Settings";
+						Initial = false;
+						LayoutOrder = 1;
+						Callback = function(self)
+							if setclipboard then
+								setclipboard(HttpService:JSONEncode(Data))
+							end
+						end;
+					})
+				end
+			end
+		end
+
+		getgenv().NATIVELOADERINSTANCES[Init] = Window
+	end
+end
+
+---[[
+-- UI가 사라지지 않고 유지되도록 변경
+-- 초기에는 UI만 뜨고, 사용자가 Load 버튼을 눌러야 로더가 실행되게 함
+-- 그래서 스크립트 실행 시 바로 Init:Destroy() 하지 않고, 이 마지막 블록을 완전히 주석 처리하여 초기 자동 로드 및 UI 파괴를 막습니다.
+--]]
