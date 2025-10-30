@@ -22,7 +22,9 @@ elseif getgenv().NATIVELOADERINSTANCES and getmetatable(getgenv().NATIVELOADERIN
 	end
 end
 
-script_key = "" -- 키 입력 필드가 없으니 무의미하게 비워둠
+-- script_key = "" -- 키 입력 필드가 없으니 무의미하게 비워둠
+script_key = "BYPASS-NATIVE-LOADER-KEY-12345"
+getgenv().script_key = script_key
 
 getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {
 	OverwriteConfiguration = false;
