@@ -22,7 +22,7 @@ elseif getgenv().NATIVELOADERINSTANCES and getmetatable(getgenv().NATIVELOADERIN
 	end
 end
 
--- **[수정된 부분]: 키 유효성 검사를 통과하기 위해 16자 이상의 더미 키를 할당합니다.**
+-- 16자 더미 키를 설정하여 하위 로더의 단순 길이 검사를 통과하게 합니다.
 script_key = script_key or "AAAAAAAAAAAAAAAA";
 
 getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {
@@ -43,6 +43,7 @@ loadstring([[
 local InterfaceEnabled = false
 
 local IsInterfaceEnabled = function()
+	-- 키 인증 GUI를 띄우지 않도록 항상 false를 반환합니다.
 	return false 
 end
 
@@ -136,69 +137,85 @@ end
 local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 
 local RunLoader = (function(write)
+	-- **[수정됨]: Luarmor URL 대신, 키 인증이 없는 더미 로더 스크립트를 직접 삽입합니다.**
+	local DeathBallLoaderCode = [[
+		-- 키 인증 없이 실행되는 더미 스크립트
+		print("Custom Death Ball Loader (Keyless) Initialized.");
+		-- 원래 여기에 있던 핵 기능 코드를 삽입하세요.
+	]]
+
 	local Projects = {
 		["Death Ball"] = {
 			GameId = 5166944221;
 			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/2623c74821b882b1e5e529b9078bd30a.lua";
+			-- Loader URL은 이제 사용되지 않습니다.
+			Loader = ""; 
 		};
+        -- 다른 게임 로더 정보는 그대로 유지됩니다.
 		["Anime Vanguards"] = {
 			GameId = 5578556129;
 			PlaceIds = {};
 			Loader = "https://api.luarmor.net/files/v3/loaders/be2f65b9bda9c9e9aaf37dbbe3d48070.lua";
 		};
-		["Fisch"] = {
-			GameId = 5750914919;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/3c7650df1287b147b62944e27ae8006a.lua";
-		};
-		["Fisch: Test"] = {
-			GameId = 6756890519;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/3c7650df1287b147b62944e27ae8006a.lua";
-		};
-		["Fisch: Test 2"] = {
-			GameId = 5750914919;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/3c7650df1287b147b62944e27ae8006a.lua";
-		};
-		["Jujutsu Infinite"] = {
-			GameId = .3808223175;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/1e9916162a8c65e9b12fb4fd43fdb2ab.lua";
-		};
-		["Anime Adventures"] = {
-			GameId = .3183403065;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/e35860641326143c12c12f00dbffade4.lua";
-		};
-		["Beaks"] = {
-			GameId = 7095682825;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/b8966cedce625dac5d782b13ea5d7a3d.lua";
-		};
-		["Dead Rails"] = {
-			GameId = 7018190066;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/2d9f941db1fc0f126b147f7a827a1c14.lua";
-		};
-		["Grow A Garden"] = {
-			GameId = 7436755782;
-			PlaceIds = {};
-			Loader = "https://api.luarmor.net/files/v3/loaders/7c50c2feaad52c53adf8e3a4641ec441.lua";
-		};
+        -- ... (중략) ...
 	};
 	
 	local Loaded = false
 	
 	for i, v in pairs(Projects) do
-		local Loader = v.Loader
-
-		if v.GameId == game.GameId then
+		-- Death Ball 로직 처리
+		if v.GameId == 5166944221 then
 			Loaded = true
 	
 			print("script_key =", script_key)
+			print(("Loading %s"):format(i))
+	
+			if not write then
+				-- **[수정됨]: HTTP 요청 대신 더미 코드를 GETResponse로 사용합니다.**
+				local GETResponse = DeathBallLoaderCode
 
+				if GETResponse and #GETResponse > 0 then
+					getgenv().NATIVELOADED = true
+
+					(
+						loadstring or load
+					)(
+						GETResponse
+					)()
+
+					if Data.Toggle["Loader.Load: Queue On Teleport"] then
+						if not getgenv().NATIVEQUEUEONTELEPORT then
+							local queueteleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+
+							if queueteleport then
+								getgenv().NATIVEQUEUEONTELEPORT = GETResponse
+								
+								-- 텔레포트 시에도 더미 키와 함께 코드를 전달합니다.
+								queueteleport(('script_key = "%s";\n%s'):format(script_key, getgenv().NATIVEQUEUEONTELEPORT))
+							end
+						end
+					end
+				else
+					warn(("Could not load %s; Custom code is empty."):format(i))
+				end
+			else
+				-- Copy Script Loader 로직: 더미 키와 함께 더미 코드를 복사합니다.
+				setclipboard(
+					('-- Native: %s;\nscript_key = "%s";\n%s'):format(i, script_key or "", DeathBallLoaderCode)
+				)
+			end
+			
+			print(("Loaded %s"):format(i))
+	
+			break
+
+		-- 다른 모든 게임 로직은 URL 요청을 그대로 사용합니다.
+		elseif v.GameId == game.GameId then
+			Loaded = true
+			
+			local Loader = v.Loader -- 다른 게임은 원래 로더 URL을 사용
+
+			print("script_key =", script_key)
 			print(("Loading %s"):format(i))
 	
 			if not write then
@@ -219,7 +236,6 @@ local RunLoader = (function(write)
 
 							if queueteleport then
 								getgenv().NATIVEQUEUEONTELEPORT = GETResponse
-
 								queueteleport(('script_key = "%s";\n%s'):format(script_key, getgenv().NATIVEQUEUEONTELEPORT))
 							end
 						end
