@@ -1,14 +1,18 @@
---! Main Script: Death Ball Auto-Parry Executor (최종, FinisherRemote - 인수 제거)
+--! Main Script: Death Ball Auto-Parry Executor (최종 후보, PlayerDevice)
+-- 키 인증 제거 및 RemoteEvent 이름을 'PlayerDevice'로 고정했습니다.
 
--- (키 인증 제거 및 서비스 초기화 로직은 이전과 동일)
+--! =============================================================
+--! 1. 전역 환경 및 필수 서비스 초기화
+--! =============================================================
 
 getgenv().NATIVELOADERINSTANCES = getgenv().NATIVELOADERINSTANCES or {}
-script_key = "AAAAAAAAAAAAAAAA" 
+script_key = "AAAAAAAAAAAAAAAA" -- 더미 키 유지
 
 local game = game
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+-- 로더가 기대하는 더미 함수들을 정의합니다.
 loadstring([[
 	function LPH_NO_VIRTUALIZE(f) return f end;
 	function LPH_JIT(f) return f end;
@@ -17,7 +21,7 @@ loadstring([[
 ]])();
 
 --! =============================================================
---! 2. 자동 패링 스크립트 (FinisherRemote 사용, 인수 제거)
+--! 2. 자동 패링 스크립트 (PlayerDevice 사용)
 --! =============================================================
 
 local AutoParryScriptCode = [[
@@ -25,24 +29,25 @@ local AutoParryScriptCode = [[
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local RunService = game:GetService("RunService")
     
-    -- 🚨 RemoteEvent 이름을 'FinisherRemote'로 고정했습니다.
-    local ParryEventName = "FinisherRemote" 
+    -- 🚨 RemoteEvent 이름을 'PlayerDevice'로 고정했습니다.
+    local ParryEventName = "PlayerDevice" 
     local ParryRemote = ReplicatedStorage:FindFirstChild(ParryEventName)
     
     if not ParryRemote or not ParryRemote:IsA("RemoteEvent") then
-        warn("❌ RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. (발견되었으나 재확인)")
+        warn("❌ RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. (마지막 후보)")
         return 
     end
 
-    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 최종 루프 시작 (인수 제거).")
+    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 최종 루프 시작 (PlayerDevice).")
     
+    -- RemoteEvent를 찾았을 경우, 패링 루프를 시작합니다.
     local function AutoParryLogic()
-        -- 💡 수정된 부분: 인수를 완전히 제거하고 호출 (서버가 인수를 요구하지 않을 경우)
+        -- 인수를 제거하고 호출. PlayerDevice는 입력 자체를 담당할 수 있습니다.
         ParryRemote:FireServer() 
     end
 
     local lastAttempt = 0
-    local COOLDOWN = 0.05 
+    local COOLDOWN = 0.05 -- 패링 시도 간격 (50ms)
 
     RunService.Heartbeat:Connect(function(dt)
         local now = tick()
