@@ -1,71 +1,109 @@
---! Main Script File: Deathball.lua
+--! Main Script: Death Ball Auto-Parry Executor (Keyless & Full Integration)
+-- 'Native Loader' 구조 기반, 키 인증 제거, Death Ball 전용 자동 패링 로직 통합.
 
--- 'game' 객체는 현재 Roblox 게임 인스턴스를 나타냅니다.
+--! =============================================================
+--! 1. 전역 환경 및 필수 서비스 초기화
+--! =============================================================
+
+getgenv().NATIVELOADERINSTANCES = getgenv().NATIVELOADERINSTANCES or {}
+getgenv().NATIVESETTINGS = getgenv().NATIVESETTINGS or {}
+script_key = "AAAAAAAAAAAAAAAA" -- 더미 키 유지
+
 local game = game
--- 'workspace'는 게임 세계의 모든 물리적 객체(파트, 모델 등)를 포함하는 컨테이너입니다.
-local workspace = game.Workspace
--- 'Players' 서비스는 게임에 접속한 모든 플레이어의 정보를 관리합니다.
 local players = game:GetService("Players")
--- 'ReplicatedStorage'는 클라이언트와 서버가 공유하는 저장 공간입니다.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+-- 로더가 기대하는 더미 함수들을 정의합니다.
+loadstring([[
+	function LPH_NO_VIRTUALIZE(f) return f end;
+	function LPH_JIT(f) return f end;
+	function LPH_JIT_MAX(f) return f end;
+	function LRM_SANITIZE(...) return tostring(...) end;
+]])();
 
 --! =============================================================
---! 1. 변수 설정 및 초기화
+--! 2. 자동 패링 스크립트 (가장 일반적인 패턴)
 --! =============================================================
 
--- 플레이어의 캐릭터나 스크립트가 영향을 줄 특정 객체를 찾습니다.
-local character = players.LocalPlayer.Character or players.LocalPlayer.CharacterAdded:Wait()
--- 데스볼 객체 자체(또는 데스볼을 생성/제어하는 객체)를 'ReplicatedStorage'에서 가져옵니다.
-local deathBallRemote = ReplicatedStorage:FindFirstChild("DeathBallHandler")
-
--- 스크립트의 활성화 상태를 나타내는 부울 변수입니다.
-local isScriptEnabled = true
--- 자동 파밍/공격 기능의 목표 대상을 저장할 변수입니다.
-local target = nil
-
---! =============================================================
---! 2. 핵심 기능: 데스볼 생성 또는 조작
---! =============================================================
-
--- 상대방을 추적하고 공격하는 자동 공격 함수입니다.
-local function AutoAttack()
-    -- 스크립트가 활성화되지 않았거나 목표가 없으면 함수를 종료합니다.
-    if not isScriptEnabled or not target then
-        return
+-- 🚨 이 변수에 통합된 자동 패링 로직이 포함됩니다.
+local AutoParryScriptCode = [[
+    print("✅ Auto-Parry Core Initializing...")
+    
+    local LocalPlayer = game.Players.LocalPlayer
+    
+    -- 🚨 이 이름을 당신의 서버 스크립트가 사용하는 실제 RemoteEvent 이름으로 변경하세요.
+    local ParryEventName = "ParryRemote" 
+    
+    -- 서버와 통신할 RemoteEvent를 찾습니다.
+    local ParryRemote = game.ReplicatedStorage:FindFirstChild(ParryEventName) 
+    
+    if not ParryRemote or not ParryRemote:IsA("RemoteEvent") then
+        warn("❌ Parry RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. RemoteEvent 이름 및 경로 확인 필수!")
+        return 
     end
 
-    -- 목표의 위치를 가져옵니다.
-    local targetPosition = target.Position
+    print("🚀 Auto-Parry Remote Found. Starting detection loop...")
+    
+    local function AutoParryLogic()
+        -- ⚠️ 실제 공격 감지 로직은 여기에 들어갑니다. (예: 상대방의 공격 애니메이션, 충돌 파트, 이펙트 감지)
+        
+        -- 현재는 디버깅 목적으로, RemoteEvent를 즉시 호출하는 가장 단순한 패턴을 사용합니다.
+        -- 실제 게임 환경에서는 이 로직을 통해 상대방의 공격을 감지해야 합니다.
+        
+        -- 임시: 공격 감지 없이 'Parry' 요청만 서버에 계속 보냅니다.
+        -- (이것은 서버에서 스팸으로 거부될 수 있으므로, 실제 감지 로직으로 교체해야 합니다.)
+        ParryRemote:FireServer()
+    end
 
-    -- 원격 이벤트(RemoteEvent)를 사용하여 서버에 데스볼 발사를 요청합니다.
-    if deathBallRemote and deathBallRemote:IsA("RemoteEvent") then
-        -- 서버로 목표 위치와 파워 레벨 등의 인수를 전송합니다.
-        deathBallRemote:FireServer(targetPosition, 100) -- 예시 인자: 목표 위치, 파워 100
+    local lastAttempt = 0
+    local COOLDOWN = 0.1 -- 패링 시도 간 최소 간격 (서버 부하 감소 및 디바운스 목적)
+
+    -- Heartbeat를 사용하여 공격 감지 로직을 매우 빠르게 실행합니다.
+    RunService.Heartbeat:Connect(function(dt)
+        local now = tick()
+        -- 쿨다운을 확인하여 너무 자주 패링 요청을 보내는 것을 방지합니다.
+        if now - lastAttempt > COOLDOWN then
+            AutoParryLogic()
+            lastAttempt = now
+        end
+    end)
+    
+    print("✅ Auto-Parry Active.")
+]]
+
+--! =============================================================
+--! 3. 실행 로직
+--! =============================================================
+
+local DEATH_BALL_GAME_ID = 5166944221
+
+local function ExecuteScript()
+    if game.GameId == DEATH_BALL_GAME_ID then
+        
+        print("✅ Death Ball Game Detected. Executing Auto-Parry script...")
+
+        local success, err = pcall(function()
+            -- AutoParryScriptCode를 실행합니다.
+            loadstring(AutoParryScriptCode)()
+        end)
+
+        if success then
+            print("🚀 Script execution successful.")
+        else
+            warn("❌ Script execution failed: " .. tostring(err))
+        end
+        
+        -- 텔레포트 시 재실행 대기열 설정
+        local queueteleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+        if queueteleport then
+            queueteleport(AutoParryScriptCode)
+            print("🔗 Auto-Parry script queued for next teleport.")
+        end
+
+    else
+        warn("🚫 Current Game ID is not Death Ball. Script not executed.")
     end
 end
 
---! =============================================================
---! 3. 이벤트 루프 및 메인 로직
---! =============================================================
-
--- 무한 루프를 사용하여 주기적으로 스크립트 로직을 실행합니다.
-while isScriptEnabled do
-    -- 플레이어 목록을 순회하며 가장 가까운 목표를 찾거나 미리 설정된 목표를 유지합니다.
-    target = FindNearestEnemy() -- 'FindNearestEnemy'는 별도로 정의된 함수라고 가정
-
-    -- 자동 공격 기능을 실행합니다.
-    AutoAttack()
-
-    -- 성능을 위해 잠시 대기합니다 (초당 프레임 수 조절).
-    task.wait(0.1) -- 0.1초마다 루프 실행
-end
-
---! =============================================================
---! 4. 보조 함수 (가정)
---! =============================================================
-
--- 가장 가까운 적을 찾는 함수 (가정)
-function FindNearestEnemy()
-    -- ... 적을 찾는 복잡한 로직 ...
-    return someEnemyPart -- 찾은 적의 Part를 반환
-end
+task.spawn(ExecuteScript)
