@@ -1,5 +1,5 @@
---! Main Script: Death Ball Auto-Parry Executor (최종, 키리스, FinisherRemote 고정)
--- 키 인증 제거 및 RemoteEvent 이름을 'FinisherRemote'로 고정하여 통합했습니다.
+--! Main Script: Death Ball Auto-Parry Executor (최종, 키리스, FinisherRemote + 인수 추가)
+-- 키 인증 제거 및 RemoteEvent 이름을 'FinisherRemote'로 고정하고 인수를 추가했습니다.
 
 --! =============================================================
 --! 1. 전역 환경 및 필수 서비스 초기화
@@ -21,7 +21,7 @@ loadstring([[
 ]])();
 
 --! =============================================================
---! 2. 자동 패링 스크립트 (FinisherRemote 사용)
+--! 2. 자동 패링 스크립트 (FinisherRemote 사용, 인수 포함)
 --! =============================================================
 
 local AutoParryScriptCode = [[
@@ -31,25 +31,24 @@ local AutoParryScriptCode = [[
     
     -- 🚨 RemoteEvent 이름을 'FinisherRemote'로 고정했습니다.
     local ParryEventName = "FinisherRemote" 
-    
     local ParryRemote = ReplicatedStorage:FindFirstChild(ParryEventName)
     
     if not ParryRemote or not ParryRemote:IsA("RemoteEvent") then
-        warn("❌ RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. 이름 확인이 필요합니다.")
+        warn("❌ RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. (발견되었으나 재확인)")
         return 
     end
 
-    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 자동 패링 루프 시작.")
+    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 최종 루프 시작 (인수 추가).")
     
     -- RemoteEvent를 찾았을 경우, 패링 루프를 시작합니다.
     local function AutoParryLogic()
-        -- ⚠️ 공격 감지 로직은 없지만, 찾은 RemoteEvent를 호출하여 패링을 시도합니다.
-        -- FinisherRemote가 패링/방어와 관련된 이벤트를 처리하기를 기대합니다.
-        ParryRemote:FireServer()
+        -- 💡 인수를 포함하여 FireServer를 호출합니다.
+        -- MouseButton1 (좌클릭)은 패링/공격 입력으로 흔히 사용되는 Enum 값입니다.
+        ParryRemote:FireServer(Enum.UserInputType.MouseButton1)
     end
 
     local lastAttempt = 0
-    local COOLDOWN = 0.05 -- 패링 시도 간격을 50ms로 더 줄여서 응답성을 높입니다.
+    local COOLDOWN = 0.05 -- 패링 시도 간격 (50ms)
 
     RunService.Heartbeat:Connect(function(dt)
         local now = tick()
@@ -59,7 +58,7 @@ local AutoParryScriptCode = [[
         end
     end)
     
-    print("✅ 자동 패링 활성화. 이제 Death Ball에 입장하여 작동을 확인하세요.")
+    print("✅ 자동 패링 활성화. 이제 작동 여부를 확인하세요.")
 ]]
 
 --! =============================================================
