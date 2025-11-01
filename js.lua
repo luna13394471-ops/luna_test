@@ -78,12 +78,12 @@ local AutoParryScriptCode = [[
     local LocalPlayer = game.Players.LocalPlayer
     
     -- 🚨🚨🚨 [필수 수정] 🚨🚨🚨
-    -- 당신의 서버 스크립트가 사용하는 실제 RemoteEvent 이름으로 'Parry'를 변경하세요.
-    local ParryEventName = "Parry" 
+    -- 당신의 서버 스크립트가 사용하는 실제 RemoteEvent 이름으로 'ParryEvent'를 변경하세요.
+    local ParryEventName = "ParryEvent" 
     
-    local Parry = game.ReplicatedStorage:FindFirstChild(ParryEventName) 
+    local ParryEvent = game.ReplicatedStorage:FindFirstChild(ParryEventName) 
     
-    if not Parry or not Parry:IsA("RemoteEvent") then
+    if not ParryEvent or not ParryEvent:IsA("RemoteEvent") then
         warn("❌ Parry RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. 이름 및 경로 확인 필수!")
         return 
     end
@@ -93,7 +93,7 @@ local AutoParryScriptCode = [[
     local function AutoParryLogic()
         -- ⚠️ 여기에 공격을 감지하는 실제 로직을 삽입해야 합니다.
         -- 현재는 디버깅 목적으로 RemoteEvent를 호출하는 가장 단순한 패턴을 사용합니다.
-        Parry:FireServer()
+        ParryEvent:FireServer()
     end
 
     local lastAttempt = 0
