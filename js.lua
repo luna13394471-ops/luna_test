@@ -1,18 +1,14 @@
---! Main Script: Death Ball Auto-Parry Executor (최종, 키리스, FinisherRemote + 인수 추가)
--- 키 인증 제거 및 RemoteEvent 이름을 'FinisherRemote'로 고정하고 인수를 추가했습니다.
+--! Main Script: Death Ball Auto-Parry Executor (최종, FinisherRemote - 인수 제거)
 
---! =============================================================
---! 1. 전역 환경 및 필수 서비스 초기화
---! =============================================================
+-- (키 인증 제거 및 서비스 초기화 로직은 이전과 동일)
 
 getgenv().NATIVELOADERINSTANCES = getgenv().NATIVELOADERINSTANCES or {}
-script_key = "AAAAAAAAAAAAAAAA" -- 더미 키 유지
+script_key = "AAAAAAAAAAAAAAAA" 
 
 local game = game
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
--- 로더가 기대하는 더미 함수들을 정의합니다.
 loadstring([[
 	function LPH_NO_VIRTUALIZE(f) return f end;
 	function LPH_JIT(f) return f end;
@@ -21,7 +17,7 @@ loadstring([[
 ]])();
 
 --! =============================================================
---! 2. 자동 패링 스크립트 (FinisherRemote 사용, 인수 포함)
+--! 2. 자동 패링 스크립트 (FinisherRemote 사용, 인수 제거)
 --! =============================================================
 
 local AutoParryScriptCode = [[
@@ -38,17 +34,15 @@ local AutoParryScriptCode = [[
         return 
     end
 
-    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 최종 루프 시작 (인수 추가).")
+    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 최종 루프 시작 (인수 제거).")
     
-    -- RemoteEvent를 찾았을 경우, 패링 루프를 시작합니다.
     local function AutoParryLogic()
-        -- 💡 인수를 포함하여 FireServer를 호출합니다.
-        -- MouseButton1 (좌클릭)은 패링/공격 입력으로 흔히 사용되는 Enum 값입니다.
-        ParryRemote:FireServer(Enum.UserInputType.MouseButton1)
+        -- 💡 수정된 부분: 인수를 완전히 제거하고 호출 (서버가 인수를 요구하지 않을 경우)
+        ParryRemote:FireServer() 
     end
 
     local lastAttempt = 0
-    local COOLDOWN = 0.05 -- 패링 시도 간격 (50ms)
+    local COOLDOWN = 0.05 
 
     RunService.Heartbeat:Connect(function(dt)
         local now = tick()
@@ -62,7 +56,7 @@ local AutoParryScriptCode = [[
 ]]
 
 --! =============================================================
---! 3. 실행 로직 (키 인증 및 GUI 제거)
+--! 3. 실행 로직 (이전과 동일)
 --! =============================================================
 
 local DEATH_BALL_GAME_ID = 5166944221
