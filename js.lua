@@ -1,5 +1,5 @@
---! Main Script: Death Ball Auto-Parry Executor (최종, 키리스, 자동 디버깅)
--- 키 인증 제거 및 5가지 RemoteEvent 이름 자동 테스트 로직 통합.
+--! Main Script: Death Ball Auto-Parry Executor (최종, 키리스, FinisherRemote 고정)
+-- 키 인증 제거 및 RemoteEvent 이름을 'FinisherRemote'로 고정하여 통합했습니다.
 
 --! =============================================================
 --! 1. 전역 환경 및 필수 서비스 초기화
@@ -21,55 +21,35 @@ loadstring([[
 ]])();
 
 --! =============================================================
---! 2. 자동 패링 스크립트 (자동 디버깅 로직 통합)
+--! 2. 자동 패링 스크립트 (FinisherRemote 사용)
 --! =============================================================
 
--- 🚨 이 변수 안에 자동 패링 로직과 자동 디버깅 로직이 포함됩니다.
 local AutoParryScriptCode = [[
     local LocalPlayer = game.Players.LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local RunService = game:GetService("RunService")
     
-    -- 🔑 가장 흔하거나 이전에 시도했던 RemoteEvent 이름 목록입니다.
-    local PotentialParryEvents = {
-        "ParryRemote", 
-        "ParryEvent",
-        "RequestParry",
-        "Parry", 
-        "DefenseEvent" 
-    }
+    -- 🚨 RemoteEvent 이름을 'FinisherRemote'로 고정했습니다.
+    local ParryEventName = "FinisherRemote" 
     
-    local ParryRemote = nil
-    local ParryEventName = nil
-
-    print("✅ 자동 패리 코어 초기화 중... RemoteEvent 이름 자동 탐색 시작.")
-
-    -- 이름 목록을 순회하며 존재하는 RemoteEvent를 찾습니다.
-    for i, name in ipairs(PotentialParryEvents) do
-        print("🔍 " .. i .. "/" .. #PotentialParryEvents .. " 시도 중: " .. name)
-        local remote = ReplicatedStorage:FindFirstChild(name)
-        
-        if remote and remote:IsA("RemoteEvent") then
-            ParryRemote = remote
-            ParryEventName = name
-            print("🚀 RemoteEvent 발견! 이름: " .. ParryEventName .. " 에서 패링 시작.")
-            break 
-        end
-    end
-
-    if not ParryRemote then
-        warn("❌ 시도된 모든 이름으로 RemoteEvent를 찾을 수 없습니다. F9 콘솔 확인 필수!")
+    local ParryRemote = ReplicatedStorage:FindFirstChild(ParryEventName)
+    
+    if not ParryRemote or not ParryRemote:IsA("RemoteEvent") then
+        warn("❌ RemoteEvent ('" .. ParryEventName .. "')를 찾을 수 없습니다. 이름 확인이 필요합니다.")
         return 
     end
+
+    print("🚀 RemoteEvent 발견: " .. ParryEventName .. ". 자동 패링 루프 시작.")
     
     -- RemoteEvent를 찾았을 경우, 패링 루프를 시작합니다.
     local function AutoParryLogic()
-        -- ⚠️ 공격 감지 로직은 없지만, 찾은 RemoteEvent를 호출합니다.
+        -- ⚠️ 공격 감지 로직은 없지만, 찾은 RemoteEvent를 호출하여 패링을 시도합니다.
+        -- FinisherRemote가 패링/방어와 관련된 이벤트를 처리하기를 기대합니다.
         ParryRemote:FireServer()
     end
 
     local lastAttempt = 0
-    local COOLDOWN = 0.1 
+    local COOLDOWN = 0.05 -- 패링 시도 간격을 50ms로 더 줄여서 응답성을 높입니다.
 
     RunService.Heartbeat:Connect(function(dt)
         local now = tick()
@@ -79,7 +59,7 @@ local AutoParryScriptCode = [[
         end
     end)
     
-    print("✅ 자동 패리 활성화. 사용 중인 이벤트: " .. ParryEventName)
+    print("✅ 자동 패링 활성화. 이제 Death Ball에 입장하여 작동을 확인하세요.")
 ]]
 
 --! =============================================================
@@ -105,11 +85,9 @@ local function ExecuteScript()
             warn("❌ 스크립트 실행에 실패했습니다: " .. tostring(err))
         end
         
-        -- Queue On Teleport 로직은 제거하여 최대한 간소화합니다. (필요 시 복구 가능)
     else
         warn("🚫 현재 게임 ID는 Death Ball이 아닙니다. 스크립트가 실행되지 않았습니다.")
     end
 end
 
--- 스크립트 실행을 시작합니다.
 task.spawn(ExecuteScript)
